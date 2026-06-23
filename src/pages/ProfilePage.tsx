@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
@@ -15,22 +16,127 @@ import {
   Camera
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
+import EditProfileModal from '../components/EditProfileModal';
 
 export default function ProfilePage() {
-  const { user, role, signOut } = useAuth();
+  const { user, role, streak, signOut, fullName, avatarUrl } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [xp, setXp] = useState(0);
+  const [coursesDone, setCoursesDone] = useState(0);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
   };
 
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+    async function fetchStats() {
+      try {
+        // Fetch completed progress
+        const { data: userProgressData } = await supabase
+          .from('user_progress')
+          .select('slide_id')
+          .eq('user_id', user.id)
+          .eq('is_completed', true);
+
+        const completedSlideIds = new Set(userProgressData?.map(p => p.slide_id) || []);
+        const totalXp = completedSlideIds.size * 100; // 100 XP per slide
+
+        // Fetch enrolled courses and find out how many are 100% completed
+        const { data: enrollmentData } = await supabase
+          .from('user_courses')
+          .select(`
+            course_id,
+            courses (
+              id,
+              chapters (
+                id,
+                lessons (
+                  id,
+                  slides (
+                    id
+                  )
+                )
+              )
+            )
+          `)
+          .eq('user_id', user.id);
+
+        let completedCoursesCount = 0;
+        if (enrollmentData) {
+          enrollmentData.forEach((item: any) => {
+            const course = item.courses;
+            if (!course) return;
+
+            let totalSlides = 0;
+            let completedInCourse = 0;
+
+            course.chapters?.forEach((chap: any) => {
+              chap.lessons?.forEach((less: any) => {
+                less.slides?.forEach((sl: any) => {
+                  totalSlides++;
+                  if (completedSlideIds.has(sl.id)) {
+                    completedInCourse++;
+                  }
+                });
+              });
+            });
+
+            if (totalSlides > 0 && completedInCourse === totalSlides) {
+              completedCoursesCount++;
+            }
+          });
+        }
+
+        if (isMounted) {
+          setXp(totalXp);
+          setCoursesDone(completedCoursesCount);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error fetching stats for profile:', err);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchStats();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
   const stats = [
-    { label: 'Current Streak', value: '12 Days', icon: Flame, color: 'text-orange-500', bg: 'bg-orange-50' },
-    { label: 'Total XP', value: '2,450', icon: Star, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-    { label: 'Courses Done', value: '3', icon: Trophy, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { 
+      label: 'Current Streak', 
+      value: loading ? '...' : `${streak} ${streak === 1 ? 'Day' : 'Days'}`, 
+      icon: Flame, 
+      color: 'text-orange-500', 
+      bg: 'bg-orange-50' 
+    },
+    { 
+      label: 'Total XP', 
+      value: loading ? '...' : xp.toLocaleString(), 
+      icon: Star, 
+      color: 'text-yellow-600', 
+      bg: 'bg-yellow-50' 
+    },
+    { 
+      label: 'Courses Done', 
+      value: loading ? '...' : `${coursesDone}`, 
+      icon: Trophy, 
+      color: 'text-emerald-600', 
+      bg: 'bg-emerald-50' 
+    },
   ];
 
   const menuItems = [
@@ -46,12 +152,20 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto space-y-8 pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* User Header */}
       <section className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-10 shadow-sm relative overflow-hidden text-center md:text-left flex flex-col md:flex-row items-center gap-8">
-        <div className="relative group">
-          <div className="w-32 h-32 rounded-[2rem] bg-slate-900 border-4 border-white shadow-2xl flex items-center justify-center text-4xl font-black text-blue-500 overflow-hidden relative">
-            {user?.email?.[0].toUpperCase()}
+        <div 
+          onClick={() => setIsEditProfileOpen(true)}
+          className="relative group cursor-pointer transition-transform hover:scale-[1.02]"
+          title="Edit Profile"
+        >
+          <div className="w-32 h-32 rounded-[2rem] bg-slate-905 border-4 border-white shadow-2xl flex items-center justify-center text-4xl font-black text-blue-500 overflow-hidden relative">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              (fullName || user?.email)?.[0].toUpperCase()
+            )}
             {/* Overlay for camera icon on hover */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-              <Camera className="w-8 h-8 text-white" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="w-8 h-8 text-white animate-in zoom-in duration-200" />
             </div>
           </div>
           <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full"></div>
@@ -60,7 +174,9 @@ export default function ProfilePage() {
         <div className="flex-1 space-y-4">
           <div>
             <div className="flex items-center justify-center md:justify-start gap-3 mb-1">
-              <h1 className="text-3xl font-black text-slate-900 tracking-tighter">{user?.email?.split('@')[0]}</h1>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+                {fullName || user?.email?.split('@')[0]}
+              </h1>
               <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-200">
                 {role || 'Student'}
               </span>
@@ -78,7 +194,11 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <button className="p-3 bg-slate-50 text-slate-400 rounded-2xl border border-slate-100 hover:text-slate-900 hover:bg-white transition-all shadow-sm">
+        <button 
+          onClick={() => setIsEditProfileOpen(true)}
+          className="p-3 bg-slate-50 text-slate-400 rounded-2xl border border-slate-100 hover:text-slate-900 hover:bg-white transition-all shadow-sm"
+          title="Edit Profile"
+        >
            <Settings className="w-6 h-6" />
         </button>
 
@@ -115,6 +235,7 @@ export default function ProfilePage() {
           {menuItems.map((item, idx) => (
             <button 
               key={idx}
+              onClick={item.label === 'Edit Profile' ? () => setIsEditProfileOpen(true) : undefined}
               className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-all group text-left"
             >
               <div className="flex items-center gap-4">
@@ -146,6 +267,12 @@ export default function ProfilePage() {
           Secure Client Connection Established
         </p>
       </section>
+
+      {/* Edit Profile Dynamic Modal */}
+      <EditProfileModal 
+        isOpen={isEditProfileOpen} 
+        onClose={() => setIsEditProfileOpen(false)} 
+      />
     </div>
   );
 }

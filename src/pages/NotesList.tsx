@@ -50,20 +50,26 @@ export default function NotesList() {
     setLoading(true);
     console.log('Fetching notes for user:', user.id);
     
-    const { data, error } = await supabase
-      .from('notes')
-      .select('id, title, content, updated_at, lesson_id')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('id, title, content, updated_at, lesson_id')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
 
-    if (error) {
-      console.error('Fetch Notes Error:', error);
-      alert(`Error loading notes: ${error.message}`);
-    } else if (data) {
-      console.log('Notes retrieved:', data.length);
-      setNotes(data as any[]);
+      if (error) {
+        console.error('Fetch Notes Error:', error);
+        alert(`Error loading notes: ${error.message}`);
+      } else if (data) {
+        console.log('Notes retrieved:', data.length);
+        setNotes(data as any[]);
+      }
+    } catch (err: any) {
+      console.error('Network error fetching notes:', err);
+      alert(`Could not fetch notes. The system may be offline or unconfigured: ${err?.message || err}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const createNote = async () => {
@@ -72,49 +78,62 @@ export default function NotesList() {
       return;
     }
     
-    const { data, error } = await supabase
-      .from('notes')
-      .insert({
-        user_id: user.id,
-        title: 'New Insight',
-        content: '<p>Start typing your thoughts here...</p>',
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .insert({
+          user_id: user.id,
+          title: 'New Insight',
+          content: '<p>Start typing your thoughts here...</p>',
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Note Creation Error:', error);
-      if (error.code === '23503' || error.message?.includes('notes_user_id_fkey') || error.message?.includes('users')) {
-        setSchemaError({
-          code: error.code,
-          message: error.message,
-          userId: user.id,
-          userEmail: user.email
-        });
-      } else {
-        alert(`Database Error: ${error.message} (Code: ${error.code})`);
+      if (error) {
+        console.error('Note Creation Error:', error);
+        if (error.code === '23503' || error.message?.includes('notes_user_id_fkey') || error.message?.includes('users')) {
+          setSchemaError({
+            code: error.code,
+            message: error.message,
+            userId: user.id,
+            userEmail: user.email
+          });
+        } else {
+          alert(`Database Error: ${error.message} (Code: ${error.code})`);
+        }
+        return;
       }
-      return;
-    }
 
-    if (data) {
-      navigate(`/notes/${data.id}`);
+      if (data) {
+        navigate(`/notes/${data.id}`);
+      }
+    } catch (err: any) {
+      console.error('Exception on creating note:', err);
+      alert(`Failed to make a new note: ${err?.message || err}`);
     }
   };
 
   const deleteNote = async () => {
     if (!deletingId) return;
     setIsDeleting(true);
-    const { error } = await supabase
-      .from('notes')
-      .delete()
-      .eq('id', deletingId);
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', deletingId);
 
-    if (!error) {
-      setNotes(notes.filter(n => n.id !== deletingId));
-      setDeletingId(null);
+      if (!error) {
+        setNotes(notes.filter(n => n.id !== deletingId));
+        setDeletingId(null);
+      } else {
+        alert(`Could not delete note: ${error.message}`);
+      }
+    } catch (err: any) {
+      console.error('Exception on deleting note:', err);
+      alert(`Failed to delete note: ${err?.message || err}`);
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
 
   const filteredNotes = notes.filter(n => {

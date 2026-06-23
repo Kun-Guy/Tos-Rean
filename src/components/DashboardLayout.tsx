@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Outlet, Link } from 'react-router-dom';
 import { 
   Home, 
   BookOpen, 
@@ -7,17 +7,69 @@ import {
   User, 
   Bell, 
   Search,
-  GraduationCap
+  GraduationCap,
+  ShieldCheck,
+  Compass,
+  Flame
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
+import { supabase } from '../lib/supabase';
+import { motion } from 'motion/react';
 
 export default function DashboardLayout() {
-  const { user } = useAuth();
+  const { user, role, streak, lastStudyDate, refreshStreak, fullName, avatarUrl } = useAuth();
+
+  const getTodayPhnomPenhStr = () => {
+    try {
+      const formatter = new Intl.DateTimeFormat('fr-CA', {
+        timeZone: 'Asia/Phnom_Penh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      return formatter.format(new Date());
+    } catch (e) {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  };
+
+  const hasActivityToday = lastStudyDate === getTodayPhnomPenhStr();
+
+  useEffect(() => {
+    if (!user) return;
+    refreshStreak();
+
+    const handleActivity = () => {
+      refreshStreak();
+    };
+    window.addEventListener('activity-updated', handleActivity);
+
+    // Setup active realtime subscriptions on user completions/answers for instant dashboard updates
+    const liveStreakChannel = supabase
+      .channel('live-streak-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_progress', filter: `user_id=eq.${user.id}` }, () => {
+        refreshStreak();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_answers', filter: `user_id=eq.${user.id}` }, () => {
+        refreshStreak();
+      })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('activity-updated', handleActivity);
+      supabase.removeChannel(liveStreakChannel);
+    };
+  }, [user]);
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
-    { icon: BookOpen, label: 'Courses', path: '/courses' },
+    { icon: BookOpen, label: 'My Courses', path: '/courses' },
+    { icon: Compass, label: 'Explore', path: '/explore' },
     { icon: StickyNote, label: 'My Notes', path: '/notes' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
@@ -36,7 +88,7 @@ export default function DashboardLayout() {
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Tos Rean • Learning</p>
             </div>
           </div>
-
+   
           <nav className="space-y-2">
             {navItems.map((item) => (
               <NavLink
@@ -56,17 +108,33 @@ export default function DashboardLayout() {
                 {item.label}
               </NavLink>
             ))}
+
+            {role === 'admin' && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider text-rose-600 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-700 transition-all group mt-6 border border-dashed border-rose-200"
+              >
+                <ShieldCheck className="w-5 h-5 group-hover:scale-110 transition-transform text-rose-500 animate-pulse" />
+                Admin Panel
+              </Link>
+            )}
           </nav>
         </div>
 
         <div className="mt-auto p-8 border-t border-slate-50">
           <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-xs font-black text-blue-500 shadow-sm">
-              {user?.email?.[0].toUpperCase()}
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-xs font-black text-blue-500 shadow-sm overflow-hidden shrink-0">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                user?.email?.[0].toUpperCase()
+              )}
             </div>
             <div className="overflow-hidden">
-              <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{user?.email}</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Level 12 • Student</p>
+              <p className="text-[11px] font-bold text-slate-900 truncate tracking-tight">{fullName || user?.email?.split('@')[0]}</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                {role === 'admin' ? 'Root • Administrator' : 'Level 12 • Student'}
+              </p>
             </div>
           </div>
         </div>
@@ -95,6 +163,41 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Live Streak indicator */}
+            <motion.div 
+              key={streak}
+              initial={{ scale: 0.95, opacity: 0.9 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 rounded-2xl text-[10px] uppercase tracking-wider font-black transition-all border shadow-sm",
+                streak === 0
+                  ? "bg-slate-100 border-slate-200 text-slate-400"
+                  : hasActivityToday
+                    ? "bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20"
+                    : "bg-amber-50 border-amber-100 text-amber-600"
+              )}
+            >
+              <Flame className={cn(
+                "w-4 h-4 shrink-0",
+                streak === 0 
+                  ? "text-slate-300 fill-slate-200" 
+                  : hasActivityToday 
+                    ? "text-white fill-white animate-pulse" 
+                    : "text-amber-500 fill-amber-400"
+              )} />
+              <span>{streak === 0 ? "0 Days" : `${streak} Day Streak`}</span>
+            </motion.div>
+
+            {role === 'admin' && (
+              <Link 
+                to="/admin" 
+                className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 hover:text-rose-700 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-rose-550 animate-pulse" />
+                Admin
+              </Link>
+            )}
             <button className="p-2.5 bg-slate-50 text-slate-400 rounded-2xl hover:text-slate-900 transition-colors relative border border-slate-100">
               <Bell className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full border-2 border-white"></span>

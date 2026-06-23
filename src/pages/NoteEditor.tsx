@@ -62,39 +62,54 @@ export default function NoteEditor() {
 
   const fetchNote = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('id', id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (!error && data) {
-      setTitle(data.title);
-      if (editor && !editor.isDestroyed) {
-        editor.commands.setContent(data.content);
-        // Ensure initial set doesn't trigger "modified" state
-        setTimeout(() => setSaveStatus('idle'), 100);
+      if (!error && data) {
+        setTitle(data.title);
+        if (editor && !editor.isDestroyed) {
+          editor.commands.setContent(data.content);
+          // Ensure initial set doesn't trigger "modified" state
+          setTimeout(() => setSaveStatus('idle'), 100);
+        }
+      } else if (error) {
+        console.error('Failed to load note data:', error);
       }
+    } catch (err) {
+      console.error('Error fetching note in editor:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const persistSave = async () => {
     if (!editor || !id) return;
     
     setSaveStatus('saving');
-    const { error } = await supabase
-      .from('notes')
-      .update({
-        title,
-        content: editor.getHTML(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          title,
+          content: editor.getHTML(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
 
-    if (!error) {
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      if (!error) {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        console.error('Save error response:', error);
+        setSaveStatus('idle');
+      }
+    } catch (err) {
+      console.error('Exception autosaving note:', err);
+      setSaveStatus('idle');
     }
   };
 
@@ -128,27 +143,33 @@ export default function NoteEditor() {
       if (!file || !user) return;
 
       setSaveStatus('saving');
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
-      const filePath = `note_attachments/${fileName}`;
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+        const filePath = `note_attachments/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('note_images')
-        .upload(filePath, file);
+        const { error: uploadError } = await supabase.storage
+          .from('note_images')
+          .upload(filePath, file);
 
-      if (uploadError) {
-        console.error('Error uploading image:', uploadError);
-        return;
+        if (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          setSaveStatus('idle');
+          return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('note_images')
+          .getPublicUrl(filePath);
+
+        if (publicUrl && editor) {
+          editor.chain().focus().setImage({ src: publicUrl }).run();
+        }
+        setSaveStatus('saved');
+      } catch (err) {
+        console.error('Image upload exception:', err);
+        setSaveStatus('idle');
       }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('note_images')
-        .getPublicUrl(filePath);
-
-      if (publicUrl && editor) {
-        editor.chain().focus().setImage({ src: publicUrl }).run();
-      }
-      setSaveStatus('saved');
     };
     input.click();
   };
