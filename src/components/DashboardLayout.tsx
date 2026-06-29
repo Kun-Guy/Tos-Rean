@@ -80,8 +80,13 @@ export default function DashboardLayout() {
       <aside className="hidden md:flex w-72 bg-white border-r border-slate-100 flex-col sticky top-0 h-screen shadow-sm z-20">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center text-blue-500 shadow-lg shadow-slate-200">
-              <GraduationCap className="w-6 h-6" />
+            <div className="w-10 h-10 bg-white border border-slate-100 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200 overflow-hidden shrink-0">
+              <img 
+                src="https://mbnywkffkntyokddsnlx.supabase.co/storage/v1/object/public/Logo/Tos%20rean.png" 
+                alt="Tos Rean Logo" 
+                className="w-full h-full object-contain p-1"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tighter leading-none text-slate-900">តោះរៀន</h1>
@@ -146,8 +151,13 @@ export default function DashboardLayout() {
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 sticky top-0 z-10">
           {/* Mobile Logo */}
           <div className="md:hidden flex items-center gap-2">
-            <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center text-blue-500 shadow-md">
-              <GraduationCap className="w-5 h-5" />
+            <div className="w-8 h-8 bg-white border border-slate-100 rounded-xl flex items-center justify-center shadow-md overflow-hidden shrink-0">
+              <img 
+                src="https://mbnywkffkntyokddsnlx.supabase.co/storage/v1/object/public/Logo/Tos%20rean.png" 
+                alt="Tos Rean Logo" 
+                className="w-full h-full object-contain p-0.5"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <h1 className="text-lg font-black tracking-tighter text-slate-900">តោះរៀន</h1>
           </div>

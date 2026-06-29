@@ -50,9 +50,14 @@ export default function LoginPage() {
           <motion.div 
             initial={{ rotate: 0 }}
             animate={{ rotate: 6 }}
-            className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 text-blue-500 shadow-xl shadow-slate-200 border-4 border-white"
+            className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 text-blue-500 shadow-xl shadow-slate-200 border border-slate-100 overflow-hidden"
           >
-            <GraduationCap className="w-8 h-8" />
+            <img 
+              src="https://mbnywkffkntyokddsnlx.supabase.co/storage/v1/object/public/Logo/Tos%20rean.png" 
+              alt="Tos Rean Logo" 
+              className="w-full h-full object-contain p-2"
+              referrerPolicy="no-referrer"
+            />
           </motion.div>
           <h1 className="text-3xl font-black text-slate-900 mb-1 tracking-tighter">តោះរៀន</h1>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em]">Tos Rean • Welcome Back</p>

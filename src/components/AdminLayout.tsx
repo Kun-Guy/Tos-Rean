@@ -39,8 +39,13 @@ export default function AdminLayout() {
       <aside className="hidden md:flex w-72 bg-slate-900 border-r border-slate-800 flex-col sticky top-0 h-screen z-20">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-900/40 animate-pulse">
-              <GraduationCap className="w-6 h-6" />
+            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-900/40 overflow-hidden shrink-0">
+              <img 
+                src="https://mbnywkffkntyokddsnlx.supabase.co/storage/v1/object/public/Logo/Tos%20rean.png" 
+                alt="Tos Rean Logo" 
+                className="w-full h-full object-contain p-1"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tighter leading-none text-white">តោះរៀន</h1>
@@ -105,8 +110,13 @@ export default function AdminLayout() {
           <div>
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-                  <GraduationCap className="w-5 h-5" />
+                <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+                  <img 
+                    src="https://mbnywkffkntyokddsnlx.supabase.co/storage/v1/object/public/Logo/Tos%20rean.png" 
+                    alt="Tos Rean Logo" 
+                    className="w-full h-full object-contain p-0.5"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
                 <h1 className="text-lg font-black tracking-tighter text-white">តោះរៀន</h1>
               </div>
@@ -166,8 +176,13 @@ export default function AdminLayout() {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 md:hidden bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-                <GraduationCap className="w-5 h-5" />
+              <div className="w-8 h-8 md:hidden bg-white rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+                <img 
+                  src="https://mbnywkffkntyokddsnlx.supabase.co/storage/v1/object/public/Logo/Tos%20rean.png" 
+                  alt="Tos Rean Logo" 
+                  className="w-full h-full object-contain p-0.5"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-black text-white tracking-tight leading-none">Admin Panel</span>
